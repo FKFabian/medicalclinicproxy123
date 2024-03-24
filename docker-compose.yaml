@@ -1,0 +1,63 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: medical-clinic
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_db:/var/lib/postgresql/data
+    networks:
+      - my-network
+
+  medical-clinic:
+    image: mojobraz
+    environment:
+      SPRING.DATASOURCE.URL: jdbc:postgresql://postgres:5432/medical-clinic
+      SPRING.DATASOURCE.USERNAME: user
+      SPRING.DATASOURCE.PASSWORD: password
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - my-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_LISTEN_PORT: 80
+    ports:
+      - "8000:80"
+    depends_on:
+      - postgres
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    networks:
+      - my-network
+
+  medical-clinic-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+    depends_on:
+      - medical-clinic
+    environment:
+      spring.cloud.openfeign.client.config.medicalClient.url: http://medical-clinic:8080
+    networks:
+      - my-network
+
+volumes:
+  pgadmin:
+  postgres_db:
+
+networks:
+  my-network:
+    driver: bridge
